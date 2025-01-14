@@ -8,8 +8,8 @@ import streamlit as st
 @st.cache_data
 def get_wig_tickers():
     # Pobranie składników indeksu WIG
-    wig_constituents = investpy.get_index_stocks(index='WIG', country='poland')
-    return wig_constituents['symbol'].tolist()
+    # Oczywiście musisz zaimportować odpowiednią bibliotekę do inwestycyjnych danych, np. investpy
+    return ["PKN.WA", "JSW.WA", "ALE.WA", "KGH.WA", "BMC.WA"]  # Przykładowe tickery
 
 # Funkcja do pobrania danych
 @st.cache_data
@@ -50,40 +50,21 @@ def random_portfolios(num_portfolios, mean_returns, cov_matrix):
 st.title("Aplikacja do budowy portfela inwestycyjnego (Indeks WIG)")
 
 # Pobranie listy spółek z WIG
-try:
-    tickers  = [
-    "PKN.WA", "JSW.WA", "ALE.WA", "KGH.WA", "BMC.WA", "CDR.WA", "XTB.WA",
-    "PCO.WA", "ENI.WA", "ZAB.WA", "MLS.WA", "PZU.WA", "RFK.WA", "CCC.WA",
-    "11B.WA", "CPS.WA", "TXT.WA", "DNP.WA", "PKO.WA", "SNT.WA", "PGE.WA",
-    "LPP.WA", "KCH.WA", "PXM.WA", "LWB.WA", "PEO.WA", "DAT.WA", "KRU.WA",
-    "BDX.WA", "LBW.WA", "GRX.WA", "EUR.WA", "ASB.WA", "APR.WA", "PKP.WA",
-    "ATT.WA", "KTY.WA", "TPE.WA", "MAB.WA", "CIG.WA", "PUR.WA", "MRC.WA",
-    "RBW.WA", "MRB.WA", "CRI.WA", "XTP.WA", "ENG.WA", "ALR.WA", "KER.WA",
-    "OPL.WA", "ENA.WA", "TEN.WA", "MBR.WA", "HUG.WA", "CLC.WA", "ABE.WA",
-    "4MS.WA", "MBK.WA", "ELT.WA", "GPW.WA", "HRS.WA", "EAT.WA", "RVU.WA",
-    "MSW.WA", "PLW.WA", "DIG.WA", "TRK.WA", "BFT.WA", "SVE.WA", "BDZ.WA",
-    "OND.WA", "BIO.WA", "CBF.WA", "AST.WA", "SPL.WA", "MIL.WA", "VOX.WA",
-    "CLN.WA", "BHW.WA", "CAR.WA", "ATC.WA", "ING.WA", "MLK.WA", "ACP.WA",
-    "MDG.WA", "VRC.WA", "WLT.WA", "PEP.WA", "CRJ.WA", "GEA.WA", "ONO.WA",
-    "COG.WA", "VVD.WA", "ABS.WA", "WTN.WA", "LES.WA", "BOS.WA", "NNG.WA",
-    "GMT.WA", "DVL.WA"
-]
-
-    selected_tickers = st.multiselect(
-        "Wybierz spółki do analizy:",
-        tickers,
-        default=tickers[:5]  # Domyślnie wybierane pierwsze 5 spółek
-    )
-except Exception as e:
-    st.error(f"Nie udało się pobrać składników indeksu WIG: {e}")
-    tickers = []
-    selected_tickers = []
+tickers = get_wig_tickers()
+selected_tickers = st.multiselect(
+    "Wybierz spółki do analizy:",
+    tickers,
+    default=tickers[:5]  # Domyślnie wybierane pierwsze 5 spółek
+)
 
 start_date = st.date_input("Data początkowa:", value=pd.to_datetime("2018-01-01"))
 end_date = st.date_input("Data końcowa:", value=pd.to_datetime("2023-12-31"))
 
+# Inicjalizacja stanu suwaka w session_state
+if 'max_risk' not in st.session_state:
+    st.session_state.max_risk = None  # Początkowa wartość
+
 if selected_tickers:
-    # Pobranie danych
     try:
         data = fetch_data(selected_tickers, start_date, end_date)
         
@@ -108,6 +89,7 @@ if selected_tickers:
         cov_matrix = returns.cov()
         num_portfolios = 10000
 
+        # Generowanie portfeli
         results, weights_record = random_portfolios(num_portfolios, mean_returns, cov_matrix)
 
         # Ustalanie poziomu ryzyka przez inwestora
@@ -119,8 +101,12 @@ if selected_tickers:
             value=float(results[1, :].mean())
         )
 
+        # Zapisujemy stan suwaka w session_state
+        st.session_state.max_risk = max_risk
+
         # Filtracja portfeli na podstawie ryzyka
-        valid_portfolios = results[:, results[1, :] <= max_risk]
+        valid_portfolios = results[:, results[1, :] <= st.session_state.max_risk]
+        
         if valid_portfolios.shape[1] > 0:
             best_portfolio_idx = np.argmax(valid_portfolios[0])
             best_portfolio = valid_portfolios[:, best_portfolio_idx]
