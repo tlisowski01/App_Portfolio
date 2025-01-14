@@ -123,9 +123,10 @@ if selected_tickers:
 
         # Sprawdzamy, czy mamy portfele, które spełniają wymagania
         if valid_portfolios.shape[1] > 0:
-            best_portfolio_idx = np.argmax(valid_portfolios[0])
-            best_portfolio = valid_portfolios[:, best_portfolio_idx]
-            best_weights = weights_record[int(best_portfolio[2])]
+            # Wybieramy najlepszy portfel spełniający wybrane ryzyko
+            best_portfolio_idx = np.argmax(valid_portfolios[0])  # Indeks najlepszego portfela
+            best_portfolio = valid_portfolios[:, best_portfolio_idx]  # Wartości portfela
+            best_weights = weights_record[int(best_portfolio[2])]  # Wagi najlepszego portfela
 
             # Wizualizacja granicy efektywnej
             st.subheader("Granica efektywna portfela")
