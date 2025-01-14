@@ -3,7 +3,6 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import streamlit as st
-import investpy
 
 # Funkcja do pobrania spółek z indeksu WIG
 @st.cache_data
