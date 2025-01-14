@@ -1,3 +1,4 @@
+import investpy
 import yfinance as yf
 import numpy as np
 import pandas as pd
@@ -45,6 +46,17 @@ def random_portfolios(num_portfolios, mean_returns, cov_matrix):
         results[2, _] = _  # Indeks portfolio
     
     return results, weights_record
+
+# Funkcja do przeliczenia zwrotu na podstawie ryzyka
+def portfolio_return_with_risk(weights, mean_returns, cov_matrix, max_risk):
+    # Obliczanie stóp zwrotu portfela
+    portfolio_return, portfolio_risk = portfolio_performance(weights, mean_returns, cov_matrix)
+    
+    # Dopasowanie portfela do zadanego ryzyka
+    if portfolio_risk <= max_risk:
+        return portfolio_return * 100  # zwrot w procentach
+    else:
+        return -np.inf  # Portfel, który nie spełnia limitu ryzyka
 
 # Główna aplikacja Streamlit
 st.title("Aplikacja do budowy portfela inwestycyjnego (Indeks WIG)")
@@ -120,21 +132,33 @@ if selected_tickers:
         )
 
         # Filtracja portfeli na podstawie ryzyka
-        valid_portfolios = results[:, results[1, :] <= max_risk]
-        if valid_portfolios.shape[1] > 0:
-            best_portfolio_idx = np.argmax(valid_portfolios[0])
-            best_portfolio = valid_portfolios[:, best_portfolio_idx]
-            best_weights = weights_record[int(best_portfolio[2])]
+        valid_portfolios = []
 
+        # Generowanie portfeli i obliczanie zwrotu, który spełnia wymagania
+        for _ in range(num_portfolios):
+            weights = np.random.random(len(mean_returns))
+            weights /= np.sum(weights)
+            
+            portfolio_return = portfolio_return_with_risk(weights, mean_returns, cov_matrix, max_risk)
+            
+            if portfolio_return != -np.inf:
+                valid_portfolios.append((portfolio_return, weights))
+
+        # Wybór najlepszego portfela
+        if valid_portfolios:
+            best_portfolio = max(valid_portfolios, key=lambda x: x[0])
+            best_return = best_portfolio[0]
+            best_weights = best_portfolio[1]
+            
             # Wizualizacja granicy efektywnej
             st.subheader("Granica efektywna portfela")
             plt.figure(figsize=(10, 6))
             plt.scatter(results[1, :], results[0, :], c=results[0, :] / results[1, :], cmap='viridis')
             plt.colorbar(label='Sharpe Ratio')
-            plt.scatter(best_portfolio[1], best_portfolio[0], marker='*', color='r', s=200, label='Najlepszy portfel')
+            plt.scatter(best_portfolio[1], best_return, marker='*', color='r', s=200, label='Najlepszy portfel')
             plt.title('Efektywna granica portfela')
             plt.xlabel('Ryzyko (odchylenie standardowe)')
-            plt.ylabel('Zwrot roczny')
+            plt.ylabel('Zwrot roczny (%)')
             plt.legend(labelspacing=0.8)
             st.pyplot(plt)
 
@@ -144,8 +168,8 @@ if selected_tickers:
                 "Spółka": selected_tickers,
                 "Udział w portfelu": [f"{weight:.2%}" for weight in best_weights]
             })
-            st.write(f"Zwrot: {best_portfolio[0]:.2f}")
-            st.write(f"Ryzyko: {best_portfolio[1]:.2f}")
+            st.write(f"Zwrot: {best_return:.2f}%")  # Zwrot w procentach
+            st.write(f"Ryzyko: {max_risk:.2f}")  # Ryzyko w odchyleniu standardowym
             st.write(allocation)
         else:
             st.warning("Żaden portfel nie spełnia określonego poziomu ryzyka.")
