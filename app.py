@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import streamlit as st
+import investpy
 
 # Funkcja do pobrania spółek z indeksu WIG
 @st.cache_data
@@ -51,7 +52,7 @@ st.title("Aplikacja do budowy portfela inwestycyjnego (Indeks WIG)")
 
 # Pobranie listy spółek z WIG
 try:
-    tickers  = [
+    tickers = [
     "PKN.WA", "JSW.WA", "ALE.WA", "KGH.WA", "BMC.WA", "CDR.WA", "XTB.WA",
     "PCO.WA", "ENI.WA", "ZAB.WA", "MLS.WA", "PZU.WA", "RFK.WA", "CCC.WA",
     "11B.WA", "CPS.WA", "TXT.WA", "DNP.WA", "PKO.WA", "SNT.WA", "PGE.WA",
@@ -67,7 +68,7 @@ try:
     "MDG.WA", "VRC.WA", "WLT.WA", "PEP.WA", "CRJ.WA", "GEA.WA", "ONO.WA",
     "COG.WA", "VVD.WA", "ABS.WA", "WTN.WA", "LES.WA", "BOS.WA", "NNG.WA",
     "GMT.WA", "DVL.WA"
-]
+    ]
 
     selected_tickers = st.multiselect(
         "Wybierz spółki do analizy:",
@@ -121,6 +122,8 @@ if selected_tickers:
 
         # Filtracja portfeli na podstawie ryzyka
         valid_portfolios = results[:, results[1, :] <= max_risk]
+
+        # Sprawdzamy, czy mamy portfele, które spełniają wymagania
         if valid_portfolios.shape[1] > 0:
             best_portfolio_idx = np.argmax(valid_portfolios[0])
             best_portfolio = valid_portfolios[:, best_portfolio_idx]
