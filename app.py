@@ -24,24 +24,25 @@ def fetch_data(tickers, start_date, end_date):
 
 # Funkcje do analizy portfela
 def portfolio_performance(weights, mean_returns, cov_matrix):
-    returns = np.sum(weights * mean_returns) * 252  # Przeliczenie na roczny zwrot
-    risk = np.sqrt(np.dot(weights.T, np.dot(cov_matrix, weights))) * np.sqrt(252)  # Przeliczenie na roczne ryzyko
+    returns = np.sum(weights * mean_returns) * 252
+    risk = np.sqrt(np.dot(weights.T, np.dot(cov_matrix, weights))) * np.sqrt(252)
     return returns, risk
+
 
 def random_portfolios(num_portfolios, mean_returns, cov_matrix):
     results = np.zeros((3, num_portfolios))
     weights_record = []
     
-    for i in range(num_portfolios):
+    for _ in range(num_portfolios):
         weights = np.random.random(len(mean_returns))
         weights /= np.sum(weights)
         weights_record.append(weights)
         
         portfolio_return, portfolio_risk = portfolio_performance(weights, mean_returns, cov_matrix)
         
-        results[0, i] = portfolio_return
-        results[1, i] = portfolio_risk
-        results[2, i] = i  # Indeks portfolio
+        results[0, _] = portfolio_return
+        results[1, _] = portfolio_risk
+        results[2, _] = _  # Indeks portfolio
     
     return results, weights_record
 
@@ -50,23 +51,23 @@ st.title("Aplikacja do budowy portfela inwestycyjnego (Indeks WIG)")
 
 # Pobranie listy spółek z WIG
 try:
-    tickers = [
-        "PKN.WA", "JSW.WA", "ALE.WA", "KGH.WA", "BMC.WA", "CDR.WA", "XTB.WA",
-        "PCO.WA", "ENI.WA", "ZAB.WA", "MLS.WA", "PZU.WA", "RFK.WA", "CCC.WA",
-        "11B.WA", "CPS.WA", "TXT.WA", "DNP.WA", "PKO.WA", "SNT.WA", "PGE.WA",
-        "LPP.WA", "KCH.WA", "PXM.WA", "LWB.WA", "PEO.WA", "DAT.WA", "KRU.WA",
-        "BDX.WA", "LBW.WA", "GRX.WA", "EUR.WA", "ASB.WA", "APR.WA", "PKP.WA",
-        "ATT.WA", "KTY.WA", "TPE.WA", "MAB.WA", "CIG.WA", "PUR.WA", "MRC.WA",
-        "RBW.WA", "MRB.WA", "CRI.WA", "XTP.WA", "ENG.WA", "ALR.WA", "KER.WA",
-        "OPL.WA", "ENA.WA", "TEN.WA", "MBR.WA", "HUG.WA", "CLC.WA", "ABE.WA",
-        "4MS.WA", "MBK.WA", "ELT.WA", "GPW.WA", "HRS.WA", "EAT.WA", "RVU.WA",
-        "MSW.WA", "PLW.WA", "DIG.WA", "TRK.WA", "BFT.WA", "SVE.WA", "BDZ.WA",
-        "OND.WA", "BIO.WA", "CBF.WA", "AST.WA", "SPL.WA", "MIL.WA", "VOX.WA",
-        "CLN.WA", "BHW.WA", "CAR.WA", "ATC.WA", "ING.WA", "MLK.WA", "ACP.WA",
-        "MDG.WA", "VRC.WA", "WLT.WA", "PEP.WA", "CRJ.WA", "GEA.WA", "ONO.WA",
-        "COG.WA", "VVD.WA", "ABS.WA", "WTN.WA", "LES.WA", "BOS.WA", "NNG.WA",
-        "GMT.WA", "DVL.WA"
-    ]
+    tickers  = [
+    "PKN.WA", "JSW.WA", "ALE.WA", "KGH.WA", "BMC.WA", "CDR.WA", "XTB.WA",
+    "PCO.WA", "ENI.WA", "ZAB.WA", "MLS.WA", "PZU.WA", "RFK.WA", "CCC.WA",
+    "11B.WA", "CPS.WA", "TXT.WA", "DNP.WA", "PKO.WA", "SNT.WA", "PGE.WA",
+    "LPP.WA", "KCH.WA", "PXM.WA", "LWB.WA", "PEO.WA", "DAT.WA", "KRU.WA",
+    "BDX.WA", "LBW.WA", "GRX.WA", "EUR.WA", "ASB.WA", "APR.WA", "PKP.WA",
+    "ATT.WA", "KTY.WA", "TPE.WA", "MAB.WA", "CIG.WA", "PUR.WA", "MRC.WA",
+    "RBW.WA", "MRB.WA", "CRI.WA", "XTP.WA", "ENG.WA", "ALR.WA", "KER.WA",
+    "OPL.WA", "ENA.WA", "TEN.WA", "MBR.WA", "HUG.WA", "CLC.WA", "ABE.WA",
+    "4MS.WA", "MBK.WA", "ELT.WA", "GPW.WA", "HRS.WA", "EAT.WA", "RVU.WA",
+    "MSW.WA", "PLW.WA", "DIG.WA", "TRK.WA", "BFT.WA", "SVE.WA", "BDZ.WA",
+    "OND.WA", "BIO.WA", "CBF.WA", "AST.WA", "SPL.WA", "MIL.WA", "VOX.WA",
+    "CLN.WA", "BHW.WA", "CAR.WA", "ATC.WA", "ING.WA", "MLK.WA", "ACP.WA",
+    "MDG.WA", "VRC.WA", "WLT.WA", "PEP.WA", "CRJ.WA", "GEA.WA", "ONO.WA",
+    "COG.WA", "VVD.WA", "ABS.WA", "WTN.WA", "LES.WA", "BOS.WA", "NNG.WA",
+    "GMT.WA", "DVL.WA"
+]
 
     selected_tickers = st.multiselect(
         "Wybierz spółki do analizy:",
@@ -98,8 +99,8 @@ if selected_tickers:
         mean_returns = returns.mean() * 252
         volatilities = returns.std() * np.sqrt(252)
         stats = pd.DataFrame({
-            "Średni zwrot roczny (%)": mean_returns * 100,  # Zmieniono na procenty
-            "Ryzyko roczne (%)": volatilities * 100  # Zmieniono na procenty
+            "Średni zwrot roczny": mean_returns,
+            "Ryzyko roczne": volatilities
         })
         st.write(stats)
 
@@ -120,13 +121,10 @@ if selected_tickers:
 
         # Filtracja portfeli na podstawie ryzyka
         valid_portfolios = results[:, results[1, :] <= max_risk]
-
-        # Sprawdzamy, czy mamy portfele, które spełniają wymagania
         if valid_portfolios.shape[1] > 0:
-            # Wybieramy najlepszy portfel spełniający wybrane ryzyko
-            best_portfolio_idx = np.argmax(valid_portfolios[0])  # Indeks najlepszego portfela
-            best_portfolio = valid_portfolios[:, best_portfolio_idx]  # Wartości portfela
-            best_weights = weights_record[int(best_portfolio[2])]  # Wagi najlepszego portfela
+            best_portfolio_idx = np.argmax(valid_portfolios[0])
+            best_portfolio = valid_portfolios[:, best_portfolio_idx]
+            best_weights = weights_record[int(best_portfolio[2])]
 
             # Wizualizacja granicy efektywnej
             st.subheader("Granica efektywna portfela")
@@ -136,7 +134,7 @@ if selected_tickers:
             plt.scatter(best_portfolio[1], best_portfolio[0], marker='*', color='r', s=200, label='Najlepszy portfel')
             plt.title('Efektywna granica portfela')
             plt.xlabel('Ryzyko (odchylenie standardowe)')
-            plt.ylabel('Zwrot roczny (%)')
+            plt.ylabel('Zwrot roczny')
             plt.legend(labelspacing=0.8)
             st.pyplot(plt)
 
@@ -146,8 +144,8 @@ if selected_tickers:
                 "Spółka": selected_tickers,
                 "Udział w portfelu": [f"{weight:.2%}" for weight in best_weights]
             })
-            st.write(f"Zwrot: {best_portfolio[0] * 100:.2f}%")  # Zwrot w procentach
-            st.write(f"Ryzyko: {best_portfolio[1] * 100:.2f}%")  # Ryzyko w procentach
+            st.write(f"Zwrot: {best_portfolio[0]:.2f}")
+            st.write(f"Ryzyko: {best_portfolio[1]:.2f}")
             st.write(allocation)
         else:
             st.warning("Żaden portfel nie spełnia określonego poziomu ryzyka.")
