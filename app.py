@@ -49,8 +49,8 @@ def plot_efficient_frontier(portfolios):
 # Główna aplikacja Streamlit
 st.title("Efektywna granica portfela (Markowitza)")
 
-# Wybór akcji
-tickers  = [
+# Pełna lista tickerów
+tickers = [
     "PKN.WA", "JSW.WA", "ALE.WA", "KGH.WA", "BMC.WA", "CDR.WA", "XTB.WA",
     "PCO.WA", "ENI.WA", "ZAB.WA", "MLS.WA", "PZU.WA", "RFK.WA", "CCC.WA",
     "11B.WA", "CPS.WA", "TXT.WA", "DNP.WA", "PKO.WA", "SNT.WA", "PGE.WA",
@@ -66,8 +66,13 @@ tickers  = [
     "MDG.WA", "VRC.WA", "WLT.WA", "PEP.WA", "CRJ.WA", "GEA.WA", "ONO.WA",
     "COG.WA", "VVD.WA", "ABS.WA", "WTN.WA", "LES.WA", "BOS.WA", "NNG.WA",
     "GMT.WA", "DVL.WA"
-] # Przykładowe tickery
-selected_tickers = st.multiselect("Wybierz spółki do analizy:", tickers, default=tickers)
+]
+
+# Domyślnie wybrane tickery
+default_tickers = ["PKN.WA", "JSW.WA", "ALE.WA", "KGH.WA", "BMC.WA"]
+
+# Wybór akcji
+selected_tickers = st.multiselect("Wybierz spółki do analizy:", tickers, default=default_tickers)
 
 start_date = st.date_input("Data początkowa:", value=pd.to_datetime("2018-01-01"))
 end_date = st.date_input("Data końcowa:", value=pd.to_datetime("2023-12-31"))
