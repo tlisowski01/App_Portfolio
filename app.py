@@ -27,20 +27,23 @@ def portfolio_performance(weights, mean_returns, cov_matrix):
     return returns, risk
 
 def random_portfolios(num_portfolios, mean_returns, cov_matrix):
-    results = np.zeros((2, num_portfolios))  # Dla zwrotu i ryzyka
-    weights_record = []
+    results = {
+        "returns": [],
+        "risks": [],
+        "weights": []
+    }
     
     for _ in range(num_portfolios):
         weights = np.random.random(len(mean_returns))
         weights /= np.sum(weights)
-        weights_record.append(weights)
         
         portfolio_return, portfolio_risk = portfolio_performance(weights, mean_returns, cov_matrix)
         
-        results[0, _] = portfolio_return
-        results[1, _] = portfolio_risk
+        results["returns"].append(portfolio_return)
+        results["risks"].append(portfolio_risk)
+        results["weights"].append(weights)
     
-    return results, weights_record
+    return results
 
 # Główna aplikacja Streamlit
 st.title("Aplikacja do budowy portfela inwestycyjnego (Indeks WIG)")
@@ -81,13 +84,13 @@ if selected_tickers:
         cov_matrix = returns.cov()
         num_portfolios = 10000
 
-        # Generowanie portfeli
-        results, weights_record = random_portfolios(num_portfolios, mean_returns, cov_matrix)
+        # Generowanie portfeli i zapisanie wyników do obiektu
+        portfolios = random_portfolios(num_portfolios, mean_returns, cov_matrix)
 
         # Wizualizacja granicy efektywnej
         st.subheader("Granica efektywna portfela")
         plt.figure(figsize=(10, 6))
-        plt.scatter(results[1, :], results[0, :], c=results[0, :] / results[1, :], cmap='viridis')
+        plt.scatter(portfolios["risks"], portfolios["returns"], c=np.array(portfolios["returns"]) / np.array(portfolios["risks"]), cmap='viridis')
         plt.colorbar(label='Sharpe Ratio')
         plt.title('Efektywna granica portfela')
         plt.xlabel('Ryzyko (odchylenie standardowe)')
@@ -98,18 +101,18 @@ if selected_tickers:
         st.subheader("Ustal swój poziom ryzyka")
         max_risk = st.slider(
             "Maksymalne ryzyko (odchylenie standardowe):",
-            min_value=float(results[1, :].min()),
-            max_value=float(results[1, :].max()),
-            value=float(results[1, :].mean())
+            min_value=float(min(portfolios["risks"])),
+            max_value=float(max(portfolios["risks"])),
+            value=float(np.mean(portfolios["risks"]))
         )
 
         # Filtracja portfeli na podstawie ryzyka
-        valid_portfolios = results[:, results[1, :] <= max_risk]
-        
-        if valid_portfolios.shape[1] > 0:
-            best_portfolio_idx = np.argmax(valid_portfolios[0])
-            best_portfolio = valid_portfolios[:, best_portfolio_idx]
-            best_weights = weights_record[int(np.where(results[1, :] == best_portfolio[1])[0][0])]
+        valid_indices = [i for i, risk in enumerate(portfolios["risks"]) if risk <= max_risk]
+        if valid_indices:
+            best_idx = max(valid_indices, key=lambda i: portfolios["returns"][i])
+            best_return = portfolios["returns"][best_idx]
+            best_risk = portfolios["risks"][best_idx]
+            best_weights = portfolios["weights"][best_idx]
 
             # Wyświetlenie szczegółów portfela
             st.subheader("Wybrany portfel")
@@ -117,8 +120,8 @@ if selected_tickers:
                 "Spółka": selected_tickers,
                 "Udział w portfelu (%)": [f"{weight * 100:.2f}%" for weight in best_weights]
             })
-            st.write(f"Zwrot (%): {best_portfolio[0] * 100:.2f}")
-            st.write(f"Ryzyko (%): {best_portfolio[1] * 100:.2f}")
+            st.write(f"Zwrot (%): {best_return * 100:.2f}")
+            st.write(f"Ryzyko (%): {best_risk * 100:.2f}")
             st.write(allocation)
         else:
             st.warning("Żaden portfel nie spełnia określonego poziomu ryzyka.")
