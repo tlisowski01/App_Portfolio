@@ -8,25 +8,48 @@ import streamlit as st
 @st.cache_data
 def fetch_data(tickers, start_date, end_date):
     data = yf.download(tickers, start=start_date, end=end_date)
-    return data["Adj Close"] if "Adj Close" in data.columns else data["Close"]
+    if "Adj Close" in data.columns:
+        return data["Adj Close"]
+    elif "Close" in data.columns:
+        return data["Close"]
+    else:
+        raise KeyError("Brak odpowiednich danych w pobranym zbiorze.")
 
-# Funkcja do obliczania wyników portfela
+# Funkcja do analizy portfela
 def portfolio_performance(weights, mean_returns, cov_matrix):
-    returns = np.sum(weights * mean_returns) * 252
-    risk = np.sqrt(np.dot(weights.T, np.dot(cov_matrix, weights))) * np.sqrt(252)
+    returns = np.sum(weights * mean_returns)
+    risk = np.sqrt(np.dot(weights.T, np.dot(cov_matrix, weights)))
     return returns, risk
 
-# Funkcja do generowania portfeli
-def generate_portfolios(mean_returns, cov_matrix, num_portfolios=10000):
-    results = []
+def generate_portfolios(num_portfolios, mean_returns, cov_matrix):
+    portfolios = []
     for _ in range(num_portfolios):
         weights = np.random.random(len(mean_returns))
         weights /= np.sum(weights)
-        returns, risk = portfolio_performance(weights, mean_returns, cov_matrix)
-        results.append({"returns": returns, "risks": risk, "weights": weights})
-    return results
+        portfolio_return, portfolio_risk = portfolio_performance(weights, mean_returns, cov_matrix)
+        portfolios.append({
+            "returns": portfolio_return,
+            "risks": portfolio_risk,
+            "weights": weights
+        })
+    return portfolios
 
-# Lista dostępnych spółek
+# Funkcja do rysowania wykresu efektywnej granicy
+def plot_efficient_frontier(portfolios):
+    risks = [p["risks"] for p in portfolios]
+    returns = [p["returns"] for p in portfolios]
+    plt.figure(figsize=(10, 6))
+    plt.scatter(risks, returns, c=np.array(returns) / np.array(risks), cmap="viridis")
+    plt.colorbar(label="Sharpe Ratio")
+    plt.title("Efektywna granica portfela")
+    plt.xlabel("Ryzyko (odchylenie standardowe)")
+    plt.ylabel("Zwrot roczny (%)")
+    st.pyplot(plt)
+
+# Główna aplikacja Streamlit
+st.title("Efektywna granica portfela (Markowitza)")
+
+# Pełna lista tickerów
 tickers = [
     "PKN.WA", "JSW.WA", "ALE.WA", "KGH.WA", "BMC.WA", "CDR.WA", "XTB.WA",
     "PCO.WA", "ENI.WA", "ZAB.WA", "MLS.WA", "PZU.WA", "RFK.WA", "CCC.WA",
@@ -45,78 +68,77 @@ tickers = [
     "GMT.WA", "DVL.WA"
 ]
 
-# Streamlit aplikacja
-st.title("Aplikacja do budowy portfela inwestycyjnego")
+# Domyślnie wybrane tickery
+default_tickers = ["PKN.WA", "JSW.WA", "ALE.WA", "KGH.WA", "BMC.WA"]
 
-# Wybór spółek
-selected_tickers = st.multiselect(
-    "Wybierz spółki do analizy:",
-    tickers,
-    default=["PKN.WA", "JSW.WA", "ALE.WA", "KGH.WA", "BMC.WA"]
-)
+# Wybór akcji
+selected_tickers = st.multiselect("Wybierz spółki do analizy:", tickers, default=default_tickers)
 
-# Data początkowa i końcowa
 start_date = st.date_input("Data początkowa:", value=pd.to_datetime("2018-01-01"))
 end_date = st.date_input("Data końcowa:", value=pd.to_datetime("2023-12-31"))
 
-# Pobieranie danych
 if selected_tickers:
-    data = fetch_data(selected_tickers, start_date, end_date)
-    returns = data.pct_change().dropna()
-    mean_returns = returns.mean()
-    cov_matrix = returns.cov()
+    try:
+        # Pobranie danych
+        data = fetch_data(selected_tickers, start_date, end_date)
 
-    # Generowanie portfeli
-    portfolios = generate_portfolios(mean_returns, cov_matrix)
+        # Obliczenie stóp zwrotu i statystyk
+        returns = data.pct_change().dropna()
+        mean_returns = returns.mean() * 252
+        cov_matrix = returns.cov() * 252
+        volatilities = returns.std() * np.sqrt(252)
 
-    st.subheader("Granica efektywna portfela")
-    plt.figure(figsize=(10, 6))
-    risks = [p["risks"] for p in portfolios]
-    returns = [p["returns"] for p in portfolios]
-    plt.scatter(risks, returns, c=[r / ri for r, ri in zip(returns, risks)], cmap="viridis")
-    plt.colorbar(label="Sharpe Ratio")
-    plt.xlabel("Ryzyko (odchylenie standardowe)")
-    plt.ylabel("Zwrot roczny")
-    st.pyplot(plt)
-
-    # Wybór poziomu ryzyka
-    st.subheader("Wybierz poziom ryzyka")
-    max_risk = st.slider(
-        "Maksymalne ryzyko (odchylenie standardowe):",
-        min_value=min(risks),
-        max_value=max(risks),
-        value=np.mean(risks)
-    )
-
-    # Filtracja portfeli na podstawie poziomu ryzyka
-    filtered_portfolios = [p for p in portfolios if p["risks"] <= max_risk]
-    if filtered_portfolios:
-        best_portfolio = max(filtered_portfolios, key=lambda p: p["returns"])
-
-        # Wyświetlanie wyników najlepszego portfela
-        allocation = pd.DataFrame({
-            "Spółka": selected_tickers,
-            "Udział w portfelu (%)": [f"{w * 100:.2f}%" for w in best_portfolio["weights"]]
+        # Wyświetlenie podstawowych statystyk
+        st.subheader("Statystyki spółek")
+        stats = pd.DataFrame({
+            "Średni zwrot roczny (%)": mean_returns * 100,
+            "Ryzyko roczne (%)": volatilities * 100
         })
-        st.write(f"Zwrot roczny (%): {best_portfolio['returns'] * 100:.2f}")
-        st.write(f"Ryzyko roczne (%): {best_portfolio['risks'] * 100:.2f}")
-        st.write(allocation)
+        st.write(stats)
 
-        # Analiza wpływu na portfel
-        st.subheader("Analiza wpływu spółek na portfel")
-        negative_impact = []
-        for ticker, weight in zip(selected_tickers, best_portfolio["weights"]):
-            temp_weights = np.array(best_portfolio["weights"])
-            temp_weights[selected_tickers.index(ticker)] = 0  # ustawiamy wagę spółki na 0
-            temp_return, temp_risk = portfolio_performance(temp_weights, mean_returns, cov_matrix)
-            negative_impact.append({"spółka": ticker, "impact": best_portfolio["risks"] - temp_risk})
+        # Identyfikacja najbardziej negatywnej spółki (największy wpływ na ryzyko portfela)
+        contributions = cov_matrix.sum(axis=1)  # Suma kowariancji dla każdej spółki
+        most_negative = contributions.idxmax()  # Spółka z najwyższym wpływem
+        st.warning(f"Najbardziej negatywny wpływ na portfel ma spółka: {most_negative}")
 
-        # Pokazanie spółki, która najbardziej wpływa na ryzyko portfela
-        negative_impact_sorted = sorted(negative_impact, key=lambda x: x["impact"], reverse=True)
-        most_impactful = negative_impact_sorted[0]
-        st.write(f"Spółka, która najbardziej wpływa na ryzyko portfela: {most_impactful['spółka']} "
-                 f"(Zmiana ryzyka: {most_impactful['impact'] * 100:.2f}%)")
-    else:
-        st.warning("Żaden portfel nie spełnia określonego poziomu ryzyka.")
+        # Generowanie portfeli (tylko raz)
+        if "portfolios" not in st.session_state:
+            num_portfolios = 10000
+            st.session_state.portfolios = generate_portfolios(num_portfolios, mean_returns, cov_matrix)
+
+        # Wyświetlenie wykresu efektywnej granicy
+        st.subheader("Granica efektywna portfela")
+        plot_efficient_frontier(st.session_state.portfolios)
+
+        # Ustalanie poziomu ryzyka
+        st.subheader("Przeglądaj portfele dla wybranego poziomu ryzyka")
+        max_risk = st.slider(
+            "Maksymalne ryzyko (odchylenie standardowe):",
+            min_value=float(min(p["risks"] for p in st.session_state.portfolios)),
+            max_value=float(max(p["risks"] for p in st.session_state.portfolios)),
+            value=float(np.mean([p["risks"] for p in st.session_state.portfolios]))
+        )
+
+        # Wybór portfela na podstawie poziomu ryzyka
+        valid_portfolios = [p for p in st.session_state.portfolios if p["risks"] <= max_risk]
+        if valid_portfolios:
+            best_portfolio = max(valid_portfolios, key=lambda p: p["returns"])
+            best_return = best_portfolio["returns"]
+            best_risk = best_portfolio["risks"]
+            best_weights = best_portfolio["weights"]
+
+            # Szczegóły portfela
+            st.subheader("Wybrany portfel")
+            allocation = pd.DataFrame({
+                "Spółka": selected_tickers,
+                "Udział w portfelu (%)": [f"{weight * 100:.2f}%" for weight in best_weights]
+            })
+            st.write(f"Zwrot roczny (%): {best_return * 100:.2f}")
+            st.write(f"Ryzyko roczne (%): {best_risk * 100:.2f}")
+            st.write(allocation)
+        else:
+            st.warning("Żaden portfel nie spełnia określonego poziomu ryzyka.")
+    except KeyError as e:
+        st.error(f"Wystąpił błąd podczas pobierania danych: {e}")
 else:
-    st.warning("Wybierz co najmniej jedną spółkę do analizy.")
+    st.write("Wybierz co najmniej jedną spółkę, aby rozpocząć analizę.")
