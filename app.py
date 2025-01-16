@@ -116,6 +116,21 @@ if selected_tickers:
         most_impactful = negative_impact_sorted[0]
         st.write(f"Spółka, która najbardziej wpływa na ryzyko portfela: {most_impactful['spółka']} "
                  f"(Zmiana ryzyka: {most_impactful['impact'] * 100:.2f}%)")
+
+        # Statystyki dla poszczególnych spółek
+        st.subheader("Podstawowe statystyki dla wybranych spółek")
+
+        # Pobranie danych dla wybranych spółek
+        selected_data = fetch_data(selected_tickers, start_date, end_date)
+        selected_returns = selected_data.pct_change().dropna()
+
+        stats = pd.DataFrame(index=selected_tickers)
+        stats["Średni zwrot roczny (%)"] = selected_returns.mean() * 252 * 100
+        stats["Ryzyko roczne (%)"] = selected_returns.std() * np.sqrt(252) * 100
+        stats["Współczynnik Sharpe'a"] = stats["Średni zwrot roczny (%)"] / stats["Ryzyko roczne (%)"]
+
+        st.write(stats)
+
     else:
         st.warning("Żaden portfel nie spełnia określonego poziomu ryzyka.")
 else:
