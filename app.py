@@ -86,6 +86,20 @@ if selected_tickers:
         returns = data.pct_change().dropna()
         mean_returns = returns.mean() * 252
         cov_matrix = returns.cov() * 252
+        volatilities = returns.std() * np.sqrt(252)
+
+        # Wyświetlenie podstawowych statystyk
+        st.subheader("Statystyki spółek")
+        stats = pd.DataFrame({
+            "Średni zwrot roczny (%)": mean_returns * 100,
+            "Ryzyko roczne (%)": volatilities * 100
+        })
+        st.write(stats)
+
+        # Identyfikacja najbardziej negatywnej spółki (największy wpływ na ryzyko portfela)
+        contributions = cov_matrix.sum(axis=1)  # Suma kowariancji dla każdej spółki
+        most_negative = contributions.idxmax()  # Spółka z najwyższym wpływem
+        st.warning(f"Najbardziej negatywny wpływ na portfel ma spółka: {most_negative}")
 
         # Generowanie portfeli (tylko raz)
         if "portfolios" not in st.session_state:
