@@ -22,19 +22,29 @@ def portfolio_performance(weights, mean_returns, cov_matrix):
     return returns, risk
 
 def generate_portfolios(num_portfolios, mean_returns, cov_matrix):
-    portfolios = {
-        "returns": [],
-        "risks": [],
-        "weights": []
-    }
+    portfolios = []
     for _ in range(num_portfolios):
         weights = np.random.random(len(mean_returns))
         weights /= np.sum(weights)
         portfolio_return, portfolio_risk = portfolio_performance(weights, mean_returns, cov_matrix)
-        portfolios["returns"].append(portfolio_return)
-        portfolios["risks"].append(portfolio_risk)
-        portfolios["weights"].append(weights)
+        portfolios.append({
+            "returns": portfolio_return,
+            "risks": portfolio_risk,
+            "weights": weights
+        })
     return portfolios
+
+# Funkcja do rysowania wykresu efektywnej granicy
+def plot_efficient_frontier(portfolios):
+    risks = [p["risks"] for p in portfolios]
+    returns = [p["returns"] for p in portfolios]
+    plt.figure(figsize=(10, 6))
+    plt.scatter(risks, returns, c=np.array(returns) / np.array(risks), cmap="viridis")
+    plt.colorbar(label="Sharpe Ratio")
+    plt.title("Efektywna granica portfela")
+    plt.xlabel("Ryzyko (odchylenie standardowe)")
+    plt.ylabel("Zwrot roczny (%)")
+    st.pyplot(plt)
 
 # Główna aplikacja Streamlit
 st.title("Efektywna granica portfela (Markowitza)")
@@ -56,36 +66,31 @@ if selected_tickers:
         mean_returns = returns.mean() * 252
         cov_matrix = returns.cov() * 252
 
-        # Generowanie portfeli
-        num_portfolios = 10000
-        portfolios = generate_portfolios(num_portfolios, mean_returns, cov_matrix)
+        # Generowanie portfeli (tylko raz)
+        if "portfolios" not in st.session_state:
+            num_portfolios = 10000
+            st.session_state.portfolios = generate_portfolios(num_portfolios, mean_returns, cov_matrix)
 
-        # Wizualizacja efektywnej granicy
+        # Wyświetlenie wykresu efektywnej granicy
         st.subheader("Granica efektywna portfela")
-        plt.figure(figsize=(10, 6))
-        plt.scatter(portfolios["risks"], portfolios["returns"], c=np.array(portfolios["returns"]) / np.array(portfolios["risks"]), cmap="viridis")
-        plt.colorbar(label="Sharpe Ratio")
-        plt.title("Efektywna granica portfela")
-        plt.xlabel("Ryzyko (odchylenie standardowe)")
-        plt.ylabel("Zwrot roczny (%)")
-        st.pyplot(plt)
+        plot_efficient_frontier(st.session_state.portfolios)
 
         # Ustalanie poziomu ryzyka
         st.subheader("Przeglądaj portfele dla wybranego poziomu ryzyka")
         max_risk = st.slider(
             "Maksymalne ryzyko (odchylenie standardowe):",
-            min_value=float(min(portfolios["risks"])),
-            max_value=float(max(portfolios["risks"])),
-            value=float(np.mean(portfolios["risks"]))
+            min_value=float(min(p["risks"] for p in st.session_state.portfolios)),
+            max_value=float(max(p["risks"] for p in st.session_state.portfolios)),
+            value=float(np.mean([p["risks"] for p in st.session_state.portfolios]))
         )
 
-        # Wybór portfela na podstawie ryzyka
-        valid_indices = [i for i, risk in enumerate(portfolios["risks"]) if risk <= max_risk]
-        if valid_indices:
-            best_idx = max(valid_indices, key=lambda i: portfolios["returns"][i])
-            best_return = portfolios["returns"][best_idx]
-            best_risk = portfolios["risks"][best_idx]
-            best_weights = portfolios["weights"][best_idx]
+        # Wybór portfela na podstawie poziomu ryzyka
+        valid_portfolios = [p for p in st.session_state.portfolios if p["risks"] <= max_risk]
+        if valid_portfolios:
+            best_portfolio = max(valid_portfolios, key=lambda p: p["returns"])
+            best_return = best_portfolio["returns"]
+            best_risk = best_portfolio["risks"]
+            best_weights = best_portfolio["weights"]
 
             # Szczegóły portfela
             st.subheader("Wybrany portfel")
@@ -93,8 +98,8 @@ if selected_tickers:
                 "Spółka": selected_tickers,
                 "Udział w portfelu (%)": [f"{weight * 100:.2f}%" for weight in best_weights]
             })
-            st.write(f"Zwrot (%): {best_return * 100:.2f}")
-            st.write(f"Ryzyko (%): {best_risk * 100:.2f}")
+            st.write(f"Zwrot roczny (%): {best_return * 100:.2f}")
+            st.write(f"Ryzyko roczne (%): {best_risk * 100:.2f}")
             st.write(allocation)
         else:
             st.warning("Żaden portfel nie spełnia określonego poziomu ryzyka.")
